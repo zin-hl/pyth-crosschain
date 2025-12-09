@@ -13,6 +13,7 @@ import { createPythContract } from "./pyth-contract";
 import { isWsEndpoint, filterInvalidPriceItems } from "../utils";
 import { PricePusherMetrics } from "../metrics";
 import { createEvmBalanceTracker } from "./balance-tracker";
+import { createSigner } from "./signer-factory";
 
 export default {
   command: "evm",
@@ -80,6 +81,8 @@ export default {
     ...options.priceConfigFile,
     ...options.priceServiceEndpoint,
     ...options.mnemonicFile,
+    ...options.kmsKeyId,
+    ...options.kmsRegion,
     ...options.pythContractAddress,
     ...options.pollingFrequency,
     ...options.pushingFrequency,
@@ -95,6 +98,8 @@ export default {
       priceConfigFile,
       priceServiceEndpoint,
       mnemonicFile,
+      kmsKeyId,
+      kmsRegion,
       pythContractAddress,
       pushingFrequency,
       pollingFrequency,
@@ -118,7 +123,17 @@ export default {
     const priceConfigs = readPriceConfigFile(priceConfigFile);
     const hermesClient = new HermesClient(priceServiceEndpoint);
 
-    const mnemonic = fs.readFileSync(mnemonicFile, "utf-8").trim();
+    // Read mnemonic if provided (for backward compatibility)
+    const mnemonic = mnemonicFile
+      ? fs.readFileSync(mnemonicFile, "utf-8").trim()
+      : undefined;
+
+    // Create signer from either KMS or mnemonic
+    const account = await createSigner({
+      kmsKeyId,
+      kmsRegion,
+      mnemonic,
+    });
 
     let priceItems = priceConfigs.map(({ id, alias }) => ({ id, alias }));
 
@@ -150,12 +165,16 @@ export default {
       logger.child({ module: "PythPriceListener" }),
     );
 
-    const client = await createClient(endpoint, mnemonic);
+    const client = await createClient(endpoint, account);
     const pythContract = createPythContract(client, pythContractAddress);
 
     logger.info(
       `Pushing updates from wallet address: ${client.account.address}`,
     );
+
+    if (kmsKeyId) {
+      logger.info(`Using AWS KMS key: ${kmsKeyId} in region: ${kmsRegion}`);
+    }
 
     // It is possible to watch the events in the non-ws endpoints, either by getFilter
     // or by getLogs, but it is very expensive and our polling mechanism does it

@@ -55,7 +55,7 @@ const getChainById = (chainId: number): Chain =>
 
 export const createClient = async (
   endpoint: string,
-  mnemonic: string,
+  account: Account,
 ): Promise<SuperWalletClient> => {
   const transport = getTransport(endpoint);
 
@@ -65,7 +65,14 @@ export const createClient = async (
 
   return createWalletClient({
     transport,
-    account: mnemonicToAccount(mnemonic),
+    account,
     chain: getChainById(chainId),
   }).extend(publicActions);
+};
+
+export const createClientFromMnemonic = async (
+  endpoint: string,
+  mnemonic: string,
+): Promise<SuperWalletClient> => {
+  return createClient(endpoint, mnemonicToAccount(mnemonic));
 };
