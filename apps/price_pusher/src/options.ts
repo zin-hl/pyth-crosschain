@@ -53,7 +53,23 @@ export const mnemonicFile = {
   "mnemonic-file": {
     description: "Path to payer mnemonic (private key) file.",
     type: "string",
-    required: true,
+    required: false,
+  } as Options,
+};
+
+export const kmsKeyId = {
+  "kms-key-id": {
+    description: "AWS KMS key ID for signing transactions. If provided, KMS will be used instead of mnemonic.",
+    type: "string",
+    required: false,
+  } as Options,
+};
+
+export const kmsRegion = {
+  "kms-region": {
+    description: "AWS region for KMS. Required if kms-key-id is provided.",
+    type: "string",
+    required: false,
   } as Options,
 };
 
